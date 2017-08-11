@@ -8,11 +8,13 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import org.apache.commons.io.FileUtils;
+import com.raizlabs.android.dbflow.config.DatabaseDefinition;
+import com.raizlabs.android.dbflow.config.FlowManager;
+import com.raizlabs.android.dbflow.sql.language.SQLite;
+import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -20,11 +22,17 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> todoAdapter;
     ListView lvItems;
     EditText etEditText;
+    ModelAdapter<TodoItem> dbAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        FlowManager.init(this);
         setContentView(R.layout.activity_main);
+
+        DatabaseDefinition db = FlowManager.getDatabase(TodoItemDatabase.class);
+        dbAdapter = FlowManager.getModelAdapter(TodoItem.class);
+
         todoItems = new ArrayList<>();
         generateItemsList();
         lvItems = (ListView) findViewById(R.id.lvitems);
@@ -36,7 +44,8 @@ public class MainActivity extends AppCompatActivity {
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 todoItems.remove(position);
                 todoAdapter.notifyDataSetChanged();
-                writeItems();
+                //writeItems();
+                //Todo: Need to remove the item from DB
                 return true;
             }
         });
@@ -55,24 +64,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void readItems(){
-        File filesDir = getFilesDir();
+        /*File filesDir = getFilesDir();
         File file = new File(filesDir, "todo.txt");
         try{
             todoItems = new ArrayList<String>(FileUtils.readLines(file));
         }
         catch(IOException e){
 
+        }*/
+        List<TodoItem> todoItemsFromDB = SQLite.select()
+                .from(TodoItem.class)
+                .queryList();
+
+        todoItems = new ArrayList<>();
+        for(TodoItem ti : todoItemsFromDB){
+            todoItems.add(ti.itemName);
         }
     }
 
     private void writeItems(){
-        File filesDir = getFilesDir();
+        /*File filesDir = getFilesDir();
         File file = new File(filesDir, "todo.txt");
         try{
             FileUtils.writeLines(file, todoItems);
         }
         catch(IOException e){
 
+        }*/
+        for(String sName : todoItems){
+            TodoItem item = new TodoItem(sName);
+            dbAdapter.insert(item);
         }
     }
 }
